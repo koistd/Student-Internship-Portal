@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+media/*
+!media/.gitkeep
+backend/media/*
+!backend/media/.gitkeep
+frontend/node_modules/
+frontend/dist/
+*.log
