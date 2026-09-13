@@ -12,8 +12,9 @@ export default function EmployerApplications() {
     setDownloading(item.id);
     setError("");
     try {
-      const { data } = await api.get(item.resume, { responseType: "blob" });
-      const url = URL.createObjectURL(data);
+      const response = await fetch(item.resume);
+      if (!response.ok) throw new Error("Resume download failed.");
+      const url = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
       link.href = url;
       link.download = `${item.student_username || "candidate"}-resume.pdf`;

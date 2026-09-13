@@ -28,9 +28,7 @@ export default function App() {
           <Route path="/student/dashboard" element={
             <ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>
           } />
-          <Route path="/internships" element={
-            <ProtectedRoute role="student"><InternshipListing /></ProtectedRoute>
-          } />
+          <Route path="/internships" element={<InternshipListing />} />
           <Route path="/student/applications" element={<ProtectedRoute role="student"><ApplicationsPage /></ProtectedRoute>} />
           <Route path="/employer/dashboard" element={
             <ProtectedRoute role="employer"><EmployerDashboard /></ProtectedRoute>

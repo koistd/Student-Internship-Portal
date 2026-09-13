@@ -1,0 +1,49 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isApprovedEmployer() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employer'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.employerProfile.is_approved == true;
+    }
+
+    match /users/{uid} {
+      allow create: if isOwner(uid);
+      allow read: if isOwner(uid) || isAdmin();
+      allow update: if isAdmin() || (isOwner(uid) && request.resource.data.role == resource.data.role && request.resource.data.uid == resource.data.uid && (resource.data.role == 'student' || request.resource.data.employerProfile.is_approved == resource.data.employerProfile.is_approved));
+      allow delete: if isAdmin();
+    }
+
+    match /internships/{internshipId} {
+      allow read: if resource.data.isActive == true || isAdmin() || (signedIn() && resource.data.postedBy == request.auth.uid);
+      allow create: if isApprovedEmployer() && request.resource.data.postedBy == request.auth.uid;
+      allow update, delete: if isAdmin() || (isApprovedEmployer() && resource.data.postedBy == request.auth.uid);
+    }
+
+    match /applications/{applicationId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.studentId == request.auth.uid) || (signedIn() && get(/databases/$(database)/documents/internships/$(resource.data.internshipId)).data.postedBy == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isAdmin() || (signedIn() && get(/databases/$(database)/documents/internships/$(resource.data.internshipId)).data.postedBy == request.auth.uid && request.resource.data.studentId == resource.data.studentId && request.resource.data.internshipId == resource.data.internshipId);
+      allow delete: if isAdmin() || (signedIn() && resource.data.studentId == request.auth.uid);
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isAdmin()
+        || (signedIn() && request.resource.data.type == 'application' && request.resource.data.sourceStudentId == request.auth.uid && get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.studentId == request.auth.uid && get(/databases/$(database)/documents/internships/$(request.resource.data.internshipId)).data.postedBy == request.resource.data.userId)
+        || (signedIn() && request.resource.data.type == 'status_update' && get(/databases/$(database)/documents/internships/$(request.resource.data.internshipId)).data.postedBy == request.auth.uid && get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.internshipId == request.resource.data.internshipId && get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.studentId == request.resource.data.userId);
+      allow update: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']));
+      allow delete: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    match /savedInternships/{savedId} {
+      allow read, delete: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
+  }
+}

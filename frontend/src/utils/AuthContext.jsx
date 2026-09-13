@@ -1,28 +1,27 @@
-import { createContext, useContext, useState } from "react";
-import api from "./api";
+import { createContext, useContext, useEffect, useState } from "react";
+import { auth } from "../firebase/config";
+import { loginUser, logoutUser, observeAuth, profileForUser } from "../firebase/auth";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("user")); } catch { return null; }
-  });
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = (userData, access, refresh) => {
-    localStorage.setItem("user", JSON.stringify(userData));
-    localStorage.setItem("access_token", access);
-    localStorage.setItem("refresh_token", refresh);
-    setUser(userData);
-  };
+  useEffect(() => observeAuth(async (firebaseUser) => {
+    setUser(firebaseUser ? await profileForUser(firebaseUser) : null);
+    setLoading(false);
+  }), []);
+
+  const login = (userData) => setUser(userData);
 
   const logout = async () => {
-    try { await api.post("/auth/logout/", { refresh: localStorage.getItem("refresh_token") }); } catch { /* Tokens are still cleared locally. */ }
-    localStorage.clear();
+    await logoutUser();
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

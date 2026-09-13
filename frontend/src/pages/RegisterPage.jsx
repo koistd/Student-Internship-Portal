@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import api from "../utils/api";
 import { useAuth } from "../utils/AuthContext";
+import { registerUser } from "../firebase/auth";
 
 export default function RegisterPage() {
   const { login } = useAuth();
@@ -25,8 +25,8 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/register/", form);
-      login(data.user, data.access, data.refresh);
+      const data = await registerUser(form);
+      login(data);
       navigate(form.role === "employer" ? "/employer/dashboard" : "/student/dashboard");
     } catch (err) {
       const details = err.response?.data;

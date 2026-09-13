@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../utils/api";
+import { useAuth } from "../utils/AuthContext";
 import "./Home.css";
 
 const steps = [
@@ -25,7 +26,8 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [internships, setInternships] = useState([]);
   const [internshipCount, setInternshipCount] = useState(0);
-  const [savedIds, setSavedIds] = useState(() => JSON.parse(localStorage.getItem("saved_internships") || "[]"));
+  const [savedIds, setSavedIds] = useState([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     api.get("/internships/")
@@ -36,11 +38,21 @@ export default function Home() {
       .catch(() => setInternships([]));
   }, []);
 
+  useEffect(() => {
+    if (!user) {
+      setSavedIds([]);
+      return;
+    }
+    api.get("/saved-internships/").then(({ data }) => setSavedIds(data)).catch(() => setSavedIds([]));
+  }, [user]);
+
   const toggleSaved = (id) => {
-    setSavedIds((current) => {
-      const next = current.includes(id) ? current.filter((savedId) => savedId !== id) : [...current, id];
-      localStorage.setItem("saved_internships", JSON.stringify(next));
-      return next;
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+    api.post("/saved-internships/", { internshipId: id }).then(({ data }) => {
+      setSavedIds((current) => data.saved ? [...current, String(id)] : current.filter((savedId) => savedId !== String(id)));
     });
   };
 
@@ -103,7 +115,7 @@ export default function Home() {
 
         <section className="section internships-section" id="internships">
           <div className="section-heading split-heading"><div><p className="section-kicker">Curated for your growth</p><h2>Featured internships</h2><p>Good work starts with a good match.</p></div><Link className="text-link" to="/internships">View all opportunities <span>→</span></Link></div>
-          <div className="internship-grid">{internships.map((internship) => <article className="featured-card" key={internship.id}><div className="featured-top"><span className="featured-badge">OPEN</span><button className="save-button" type="button" aria-label={`${savedIds.includes(internship.id) ? "Remove" : "Save"} ${internship.title}`} onClick={() => toggleSaved(internship.id)}>{savedIds.includes(internship.id) ? "♥" : "♡"}</button></div><div className="company-mark blue">{internship.company_name?.slice(0, 2).toUpperCase() || "IN"}</div><h3>{internship.title}</h3><p className="company-name">{internship.company_name || "Partner company"}</p><div className="job-meta"><span>⌖ {internship.location}</span><span>◷ {internship.duration}</span></div><div className="job-footer"><div><small>Stipend</small><strong>{internship.stipend}</strong></div><div><small>Apply by</small><strong>{internship.deadline}</strong></div></div><Link className="apply-link" to="/login">Apply now <span>↗</span></Link></article>)}</div>
+          <div className="internship-grid">{internships.map((internship) => <article className="featured-card" key={internship.id}><div className="featured-top"><span className="featured-badge">OPEN</span><button className="save-button" type="button" aria-label={`${savedIds.includes(String(internship.id)) ? "Remove" : "Save"} ${internship.title}`} onClick={() => toggleSaved(internship.id)}>{savedIds.includes(String(internship.id)) ? "♥" : "♡"}</button></div><div className="company-mark blue">{internship.company_name?.slice(0, 2).toUpperCase() || "IN"}</div><h3>{internship.title}</h3><p className="company-name">{internship.company_name || "Partner company"}</p><div className="job-meta"><span>⌖ {internship.location}</span><span>◷ {internship.duration}</span></div><div className="job-footer"><div><small>Stipend</small><strong>{internship.stipend}</strong></div><div><small>Apply by</small><strong>{internship.deadline}</strong></div></div><Link className="apply-link" to="/login">Apply now <span>↗</span></Link></article>)}</div>
           {!internships.length && <p className="empty-featured">No featured internships are available right now.</p>}
         </section>
 

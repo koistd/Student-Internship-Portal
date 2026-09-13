@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { useAuth } from "../utils/AuthContext";
-import api from "../utils/api";
+import { loginUser } from "../firebase/auth";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -20,10 +20,10 @@ export default function LoginPage() {
     if (!form.email || !form.password) { setError("Both fields are required."); return; }
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/login/", form);
-      login(data.user, data.access, data.refresh);
+      const data = await loginUser(form.email, form.password);
+      login(data);
       if (data.role === "employer") navigate("/employer/dashboard");
-      else if (data.role === "admin")  navigate("/admin");
+      else if (data.role === "admin") navigate("/admin");
       else                             navigate("/student/dashboard");
     } catch (err) {
       setError(err.response?.data?.detail ?? "Login failed. Please try again.");
