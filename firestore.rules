@@ -12,9 +12,17 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow create: if isOwner(uid);
+      allow create: if signedIn() && request.auth.uid == uid;
       allow read: if isOwner(uid) || isAdmin();
-      allow update: if isAdmin() || (isOwner(uid) && request.resource.data.role == resource.data.role && request.resource.data.uid == resource.data.uid && (resource.data.role == 'student' || request.resource.data.employerProfile.is_approved == resource.data.employerProfile.is_approved));
+      allow update: if isAdmin() || (
+        isOwner(uid)
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.uid == resource.data.uid
+        && (
+          resource.data.role == 'student'
+          || request.resource.data.employerProfile.is_approved == resource.data.employerProfile.is_approved
+        )
+      );
       allow delete: if isAdmin();
     }
 
